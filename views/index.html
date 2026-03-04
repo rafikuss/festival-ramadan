@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌙 Festival Ramadan 1447H</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ecf0f1;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #D4AF37;
+            text-shadow: 0 0 20px rgba(212,175,55,0.5);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+        }
+
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .nav button {
+            padding: 12px 25px;
+            background: rgba(212,175,55,0.15);
+            color: #D4AF37;
+            border: 2px solid #D4AF37;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .nav button:hover, .nav button.active {
+            background: #D4AF37;
+            color: #1a1a2e;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(26,26,46,0.9);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid;
+            transition: transform 0.3s;
+        }
+
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-card.gold { border-color: #D4AF37; }
+        .stat-card.green { border-color: #2ecc71; }
+        .stat-card.blue { border-color: #3498db; }
+        .stat-card.purple { border-color: #9b59b6; }
+        .stat-card.red { border-color: #e74c3c; }
+
+        .stat-card .icon { font-size: 2rem; margin-bottom: 10px; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: #D4AF37; }
+        .stat-card .label { font-size: 0.9rem; opacity: 0.7; margin-top: 5px; }
+
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: rgba(26,26,46,0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(212,175,55,0.2);
+        }
+
+        .card h2, .card h3 { color: #D4AF37; margin-bottom: 20px; }
+
+        .table-container { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th {
+            background: rgba(212,175,55,0.15);
+            color: #D4AF37;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        tr:hover td { background: rgba(212,175,55,0.05); }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .badge-danger { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .badge-purple { background: rgba(155,89,182,0.2); color: #9b59b6; }
+
+        .progress {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #D4AF37, #2ecc71);
+            transition: width 0.5s;
+        }
+
+        .form-group { margin-bottom: 20px; }
+
+        .form-group label {
+            display: block;
+            color: #D4AF37;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(212,175,55,0.3);
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            color: #ecf0f1;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: #D4AF37;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #D4AF37, #B8960F);
+            color: #1a1a2e;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(212,175,55,0.4);
+        }
+
+        .btn-full { width: 100%; }
+
+        .comparison-bar {
+            display: flex;
+            height: 50px;
+            border-radius: 25px;
+            overflow: hidden;
+            margin: 20px 0;
+            border: 2px solid rgba(212,175,55,0.3);
+        }
+
+        .bar-pres {
+            background: linear-gradient(135deg, #D4AF37, #B8960F);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a1a2e;
+            font-weight: 700;
+            transition: width 0.5s;
+            min-width: 60px;
+        }
+
+        .bar-ligne {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            transition: width 0.5s;
+            min-width: 60px;
+        }
+
+        .timeline-item {
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #D4AF37;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .timeline-item .action { font-weight: 700; color: #2ecc71; }
+        .timeline-item .date { font-size: 0.85rem; opacity: 0.7; }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .message.success {
+            background: rgba(46,204,113,0.2);
+            border: 1px solid #2ecc71;
+            color: #2ecc71;
+            display: block;
+        }
+
+        .message.error {
+            background: rgba(231,76,60,0.2);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+            display: block;
+        }
+
+        .medal { font-size: 1.3rem; }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8rem; }
+            .form-row { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .nav { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="header">
+            <div style="font-size: 3rem;">🌙✨🏮</div>
+            <h1>Festival Ramadan 1447H</h1>
+            <p>Gestion des tickets • 20 journées • Présentiel & En ligne</p>
+        </div>
+
+        <div class="nav">
+            <button class="active" onclick="showSection('journees', this)">📋 20 Journées</button>
+            <button onclick="showSection('vente', this)">🎫 Vendre des Tickets</button>
+            <button onclick="showSection('stats', this)">📈 Statistiques</button>
+            <button onclick="showSection('classement', this)">🏆 Classement</button>
+            <button onclick="showSection('historique', this)">📜 Historique</button>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="stats-grid" id="stats-cards">
+            <div class="stat-card gold">
+                <div class="icon">📅</div>
+                <div class="value" id="card-journees">20</div>
+                <div class="label">Journées</div>
+            </div>
+            <div class="stat-card green">
+                <div class="icon">🎫</div>
+                <div class="value" id="card-tickets">0</div>
+                <div class="label">Tickets Vendus</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="icon">🏪</div>
+                <div class="value" id="card-presentiel">0</div>
+                <div class="label">Présentiel</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="icon">🌐</div>
+                <div class="value" id="card-en-ligne">0</div>
+                <div class="label">En Ligne</div>
+            </div>
+            <div class="stat-card red">
+                <div class="icon">💰</div>
+                <div class="value" id="card-recettes">0</div>
+                <div class="label">Recettes (DA)</div>
+            </div>
+        </div>
+
+        <!-- SECTION : 20 JOURNÉES -->
+        <div id="section-journees" class="section active">
+            <div class="card">
+                <h2>📋 Les 20 Journées du Festival Ramadan 1447H</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Jour</th>
+                                <th>🎤 Artiste</th>
+                                <th>🎵 Genre</th>
+                                <th>🏪 Présentiel</th>
+                                <th>🌐 En Ligne</th>
+                                <th>📦 Total</th>
+                                <th>📊 Taux</th>
+                                <th>💰 Recette</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-journees">
+                            <tr>
+                                <td colspan="9" style="text-align:center; padding:30px;">
+                                    ⏳ Chargement...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION : VENTE -->
+        <div id="section-vente" class="section">
+            <div class="card">
+                <h2>🎫 Vendre des Tickets</h2>
+                <form id="form-vente" onsubmit="vendreTickets(event)">
+                    <div class="form-group">
+                        <label>📅 Choisir la journée (artiste)</label>
+                        <select id="vente-journee" required>
+                            <option value="">-- Sélectionner une journée --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>📊 Type de vente</label>
+                        <select id="vente-type" required>
+                            <option value="presentiel">🏪 Présentiel (guichet)</option>
+                            <option value="en_ligne">🌐 En Ligne (internet)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>🎫 Nombre de tickets</label>
+                            <input type="number" id="vente-tickets" min="1" required placeholder="Ex: 150">
+                        </div>
+                        <div class="form-group">
+                            <label>💰 Prix du ticket (DA)</label>
+                            <input type="number" id="vente-prix" min="0" step="0.01" value="1500" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-gold btn-full">
+                        ✅ Enregistrer la vente
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- SECTION : STATISTIQUES -->
+        <div id="section-stats" class="section">
+            <div class="card">
+                <h2>⚖️ Présentiel vs En Ligne</h2>
+                <div class="comparison-bar">
+                    <div class="bar-pres" id="bar-pres" style="width:50%">🏪 50%</div>
+                    <div class="bar-ligne" id="bar-ligne" style="width:50%">🌐 50%</div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
+                    <div style="text-align:center;">
+                        <div style="font-size:2rem; color:#D4AF37; font-weight:700;" id="stats-pres-total">0</div>
+                        <div>🏪 Tickets Présentiel</div>
+                        <div style="color:#D4AF37;" id="stats-pres-pct">0%</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:2rem; color:#3498db; font-weight:700;" id="stats-ligne-total">0</div>
+                        <div>🌐 Tickets En Ligne</div>
+                        <div style="color:#3498db;" id="stats-ligne-pct">0%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>💰 Recettes</h2>
+                <div style="text-align:center;">
+                    <div style="font-size:3rem; color:#D4AF37; font-weight:700;" id="stats-recettes">0 DA</div>
+                    <div style="margin-top:10px;">Recettes totales</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION : CLASSEMENT -->
+        <div id="section-classement" class="section">
+            <div class="nav" style="margin-bottom:20px;">
+                <button class="active" onclick="chargerClassement('total', this)">🏆 Total</button>
+                <button onclick="chargerClassement('presentiel', this)">🏪 Présentiel</button>
+                <button onclick="chargerClassement('en_ligne', this)">🌐 En Ligne</button>
+            </div>
+            <div class="card">
+                <h2 id="classement-titre">🏆 Classement par Ventes Totales</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rang</th>
+                                <th>Artiste</th>
+                                <th>Jour</th>
+                                <th>Tickets</th>
+                                <th>Recette</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-classement">
+                            <tr>
+                                <td colspan="5" style="text-align:center;">Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION : HISTORIQUE -->
+        <div id="section-historique" class="section">
+            <div class="card">
+                <h2>📜 Historique des Ventes</h2>
+                <div id="timeline-container">
+                    <p style="text-align:center; opacity:0.7;">Aucune vente enregistrée</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+
+        function showSection(name, btn) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`section-${name}`).classList.add('active');
+            document.querySelectorAll('.nav')[0].querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            if (name === 'journees') chargerJournees();
+            if (name === 'stats') chargerStats();
+            if (name === 'classement') chargerClassement('total');
+            if (name === 'historique') chargerHistorique();
+        }
+
+        function afficherMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            setTimeout(() => { msg.className = 'message'; }, 4000);
+        }
+
+        async function chargerJournees() {
+            try {
+                const res = await fetch('/api/journees');
+                const data = await res.json();
+                if (!data.success) return;
+
+                const tbody = document.getElementById('tbody-journees');
+                const select = document.getElementById('vente-journee');
+
+                tbody.innerHTML = data.journees.map(j => {
+                    const total = j.tickets_total || 0;
+                    const taux = j.taux_remplissage || 0;
+                    const statusBadge = j.est_complet
+                        ? '<span class="badge badge-danger">🔴 Complet</span>'
+                        : '<span class="badge badge-success">🟢 Dispo</span>';
+
+                    return `
+                        <tr>
+                            <td><strong>Jour ${j.numero_jour}</strong></td>
+                            <td>${j.artiste_nom}</td>
+                            <td><span class="badge badge-purple">${j.artiste_genre}</span></td>
+                            <td>${j.tickets_presentiel.toLocaleString()}</td>
+                            <td>${j.tickets_en_ligne.toLocaleString()}</td>
+                            <td><strong>${total.toLocaleString()}</strong></td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar" style="width:${taux}%"></div>
+                                </div>
+                                <small>${taux}%</small>
+                            </td>
+                            <td>${j.recette_totale.toLocaleString()} DA</td>
+                            <td>${statusBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                select.innerHTML = '<option value="">-- Sélectionner une journée --</option>';
+                data.journees.forEach(j => {
+                    const total = j.tickets_total || 0;
+                    const reste = j.capacite_max - total;
+                    const label = `Jour ${j.numero_jour} - ${j.artiste_nom} (${reste} places)`;
+                    select.innerHTML += `<option value="${j.id}" ${reste <= 0 ? 'disabled' : ''}>${label}</option>`;
+                });
+
+                chargerStatsCards();
+            } catch (err) {
+                console.error('Erreur:', err);
+            }
+        }
+
+        async function chargerStatsCards() {
+            try {
+                const res = await fetch('/api/stats/global');
+                const data = await res.json();
+                if (!data.success) return;
+
+                const s = data.stats;
+                document.getElementById('card-journees').textContent = s.nb_journees;
+                document.getElementById('card-tickets').textContent = (s.total_tickets || 0).toLocaleString();
+                document.getElementById('card-presentiel').textContent = (s.total_presentiel || 0).toLocaleString();
+                document.getElementById('card-en-ligne').textContent = (s.total_en_ligne || 0).toLocaleString();
+                document.getElementById('card-recettes').textContent = (s.recette_totale || 0).toLocaleString();
+            } catch (err) {
+                console.error('Erreur stats:', err);
+            }
+        }
+
+        async function vendreTickets(e) {
+            e.preventDefault();
+
+            const journee_id = document.getElementById('vente-journee').value;
+            const type_vente = document.getElementById('vente-type').value;
+            const tickets_vendus = parseInt(document.getElementById('vente-tickets').value);
+            const prix_ticket = parseFloat(document.getElementById('vente-prix').value);
+
+            if (!journee_id) {
+                afficherMessage('⚠️ Sélectionnez une journée', 'error');
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ journee_id, type_vente, tickets_vendus, prix_ticket })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    const typeLabel = type_vente === 'presentiel' ? '🏪 Présentiel' : '🌐 En Ligne';
+                    afficherMessage(
+                        `✅ ${tickets_vendus} tickets vendus (${typeLabel}) ! Total: ${data.nouveau_total} | Reste: ${data.places_restantes}`,
+                        'success'
+                    );
+                    document.getElementById('vente-tickets').value = '';
+                    chargerJournees();
+                } else {
+                    afficherMessage(`❌ ${data.error} (Reste: ${data.places_restantes || 0} places)`, 'error');
+                }
+            } catch (err) {
+                afficherMessage('❌ Erreur de connexion', 'error');
+            }
+        }
+
+        async function chargerStats() {
+            try {
+                const res = await fetch('/api/stats/global');
+                const data = await res.json();
+                if (!data.success) return;
+
+                const s = data.stats;
+                const pres = parseFloat(s.pourcentage_presentiel) || 0;
+                const ligne = parseFloat(s.pourcentage_en_ligne) || 0;
+
+                document.getElementById('bar-pres').style.width = `${Math.max(pres, 5)}%`;
+                document.getElementById('bar-pres').textContent = `🏪 ${pres}%`;
+                document.getElementById('bar-ligne').style.width = `${Math.max(ligne, 5)}%`;
+                document.getElementById('bar-ligne').textContent = `🌐 ${ligne}%`;
+
+                document.getElementById('stats-pres-total').textContent = (s.total_presentiel || 0).toLocaleString();
+                document.getElementById('stats-ligne-total').textContent = (s.total_en_ligne || 0).toLocaleString();
+                document.getElementById('stats-pres-pct').textContent = `${pres}%`;
+                document.getElementById('stats-ligne-pct').textContent = `${ligne}%`;
+                document.getElementById('stats-recettes').textContent = `${(s.recette_totale || 0).toLocaleString()} DA`;
+            } catch (err) {
+                console.error('Erreur stats:', err);
+            }
+        }
+
+        async function chargerClassement(type, btn) {
+            if (btn) {
+                const parent = btn.parentElement;
+                parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+
+            let url = '/api/stats/classement';
+            let titre = '🏆 Classement par Ventes Totales';
+            let ticketKey = 'total_tickets';
+
+            if (type === 'presentiel') {
+                url = '/api/stats/classement-presentiel';
+                titre = '🏪 Classement par Ventes Présentiel';
+                ticketKey = 'presentiel';
+            } else if (type === 'en_ligne') {
+                url = '/api/stats/classement-en-ligne';
+                titre = '🌐 Classement par Ventes En Ligne';
+                ticketKey = 'en_ligne';
+            }
+
+            document.getElementById('classement-titre').textContent = titre;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data.success) return;
+
+                const tbody = document.getElementById('tbody-classement');
+
+                if (data.classement.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune vente</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.classement.map((item, i) => {
+                    const medals = { 0: '🥇', 1: '🥈', 2: '🥉' };
+                    const medal = medals[i] || `${i + 1}.`;
+                    const tickets = item[ticketKey] || 0;
+                    const recette = item.recette || 0;
+
+                    return `
+                        <tr>
+                            <td><span class="medal">${medal}</span></td>
+                            <td>${item.artiste_nom}</td>
+                            <td>Jour ${item.numero_jour}</td>
+                            <td><strong>${tickets.toLocaleString()}</strong></td>
+                            <td>${recette.toLocaleString()} DA</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Erreur classement:', err);
+            }
+        }
+
+        async function chargerHistorique() {
+            try {
+                const res = await fetch('/api/historique');
+                const data = await res.json();
+                if (!data.success) return;
+
+                const container = document.getElementById('timeline-container');
+
+                if (data.historique.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; opacity:0.7;">📜 Aucune vente enregistrée</p>';
+                    return;
+                }
+
+                container.innerHTML = data.historique.map(h => {
+                    const date = new Date(h.date_action).toLocaleString('fr-FR');
+                    const typeIcon = h.type_vente === 'presentiel' ? '🏪' : '🌐';
+                    const typeLabel = h.type_vente === 'presentiel' ? 'Présentiel' : 'En Ligne';
+
+                    return `
+                        <div class="timeline-item">
+                            <div>
+                                <span class="action">🎫 VENTE</span> •
+                                ${typeIcon} ${typeLabel} •
+                                <strong>${h.artiste_nom}</strong> •
+                                ${h.tickets} tickets •
+                                Total: ${h.ancien_total} → <strong>${h.nouveau_total}</strong>
+                            </div>
+                            <div class="date">${date}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Erreur historique:', err);
+            }
+        }
+
+        chargerJournees();
+
+    </script>
+</body>
+</html>
