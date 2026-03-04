@@ -1,8 +1,9 @@
 const express = require("express");
-const Database = require("better-sqlite3");
+const initSqlJs = require("sql.js");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,13 +12,9 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-/* ═══════════════════════════════════════════════════════════════
-   BASE DE DONNÉES
-=================================================================== */
+const DB_PATH = path.join(__dirname, "database.db");
 
-const db = new Database("./database.db");
-db.pragma('journal_mode = WAL');
-console.log("✅ Base de données connectée");
+let db;
 
 /* ═══════════════════════════════════════════════════════════════
    20 ARTISTES
@@ -47,87 +44,169 @@ const JOURNEES_ARTISTES = [
 ];
 
 /* ═══════════════════════════════════════════════════════════════
-   CRÉATION DES TABLES
+   SAUVEGARDER LA BASE SUR DISQUE
 =================================================================== */
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS artistes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom TEXT UNIQUE NOT NULL,
-        genre TEXT DEFAULT 'Non spécifié'
-    )
-`);
+function sauvegarderDB() {
+    try {
+        const data = db.export();
+        const buffer = Buffer.from(data);
+        fs.writeFileSync(DB_PATH, buffer);
+    } catch (err) {
+        console.error("Erreur sauvegarde:", err);
+    }
+}
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS journees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        numero_jour INTEGER UNIQUE NOT NULL,
-        artiste_id INTEGER NOT NULL,
-        capacite_max INTEGER DEFAULT 5000,
-        prix_presentiel REAL DEFAULT 1500,
-        prix_en_ligne REAL DEFAULT 1200,
-        FOREIGN KEY (artiste_id) REFERENCES artistes(id)
-    )
-`);
-
-db.exec(`
-    CREATE TABLE IF NOT EXISTS tickets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        journee_id INTEGER NOT NULL,
-        type_vente TEXT NOT NULL,
-        tickets_vendus INTEGER NOT NULL,
-        prix_ticket REAL NOT NULL,
-        date_vente DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (journee_id) REFERENCES journees(id)
-    )
-`);
-
-db.exec(`
-    CREATE TABLE IF NOT EXISTS historique (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        action TEXT NOT NULL,
-        journee_id INTEGER,
-        artiste_nom TEXT,
-        type_vente TEXT,
-        tickets INTEGER,
-        ancien_total INTEGER,
-        nouveau_total INTEGER,
-        date_action DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-`);
+// Sauvegarde automatique toutes les 30 secondes
+setInterval(sauvegarderDB, 30000);
 
 /* ═══════════════════════════════════════════════════════════════
-   INITIALISER LES 20 ARTISTES ET JOURNÉES
+   INITIALISER LA BASE
 =================================================================== */
 
-const count = db.prepare("SELECT COUNT(*) as count FROM artistes").get();
+async function initialiserDB() {
+    const SQL = await initSqlJs();
 
-if (count.count === 0) {
-    console.log("🌙 Initialisation des 20 journées...");
+    // Charger la base existante ou en créer une nouvelle
+    if (fs.existsSync(DB_PATH)) {
+        const fileBuffer = fs.readFileSync(DB_PATH);
+        db = new SQL.Database(fileBuffer);
+        console.log("✅ Base de données chargée depuis le disque");
+    } else {
+        db = new SQL.Database();
+        console.log("✅ Nouvelle base de données créée");
+    }
 
-    const insertArtiste = db.prepare("INSERT INTO artistes (nom, genre) VALUES (?, ?)");
-    const insertJournee = db.prepare("INSERT INTO journees (numero_jour, artiste_id) VALUES (?, ?)");
+    // Créer les tables
+    db.run(`
+        CREATE TABLE IF NOT EXISTS artistes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nom TEXT UNIQUE NOT NULL,
+            genre TEXT DEFAULT 'Non spécifié'
+        )
+    `);
 
-    const transaction = db.transaction(() => {
+    db.run(`
+        CREATE TABLE IF NOT EXISTS journees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_jour INTEGER UNIQUE NOT NULL,
+            artiste_id INTEGER NOT NULL,
+            capacite_max INTEGER DEFAULT 5000,
+            prix_presentiel REAL DEFAULT 1500,
+            prix_en_ligne REAL DEFAULT 1200
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            journee_id INTEGER NOT NULL,
+            type_vente TEXT NOT NULL,
+            tickets_vendus INTEGER NOT NULL,
+            prix_ticket REAL NOT NULL,
+            date_vente DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS historique (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            action TEXT NOT NULL,
+            journee_id INTEGER,
+            artiste_nom TEXT,
+            type_vente TEXT,
+            tickets INTEGER,
+            ancien_total INTEGER,
+            nouveau_total INTEGER,
+            date_action DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Vérifier si les artistes existent
+    const result = db.exec("SELECT COUNT(*) as count FROM artistes");
+    const count = result[0].values[0][0];
+
+    if (count === 0) {
+        console.log("🌙 Initialisation des 20 journées...");
+
         JOURNEES_ARTISTES.forEach((item) => {
-            const result = insertArtiste.run(item.nom, item.genre);
-            insertJournee.run(item.jour, result.lastInsertRowid);
-        });
-    });
+            db.run("INSERT INTO artistes (nom, genre) VALUES (?, ?)", [item.nom, item.genre]);
 
-    transaction();
-    console.log("✅ 20 artistes et 20 journées créés !");
-} else {
-    console.log(`✅ ${count.count} artistes déjà en mémoire`);
+            const artisteResult = db.exec("SELECT last_insert_rowid() as id");
+            const artiste_id = artisteResult[0].values[0][0];
+
+            db.run("INSERT INTO journees (numero_jour, artiste_id) VALUES (?, ?)", [item.jour, artiste_id]);
+        });
+
+        sauvegarderDB();
+        console.log("✅ 20 artistes et 20 journées créés !");
+    } else {
+        console.log(`✅ ${count} artistes déjà en mémoire`);
+    }
+
+    // Démarrer le serveur
+    demarrerServeur();
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   API : TOUTES LES JOURNÉES
+   FONCTIONS UTILITAIRES
 =================================================================== */
 
-app.get("/api/journees", (req, res) => {
+function queryAll(sql, params = []) {
     try {
-        const rows = db.prepare(`
+        const stmt = db.prepare(sql);
+        if (params.length > 0) stmt.bind(params);
+
+        const rows = [];
+        while (stmt.step()) {
+            rows.push(stmt.getAsObject());
+        }
+        stmt.free();
+        return rows;
+    } catch (err) {
+        console.error("Erreur SQL:", err);
+        return [];
+    }
+}
+
+function queryOne(sql, params = []) {
+    try {
+        const stmt = db.prepare(sql);
+        if (params.length > 0) stmt.bind(params);
+
+        let row = null;
+        if (stmt.step()) {
+            row = stmt.getAsObject();
+        }
+        stmt.free();
+        return row;
+    } catch (err) {
+        console.error("Erreur SQL:", err);
+        return null;
+    }
+}
+
+function runSQL(sql, params = []) {
+    try {
+        db.run(sql, params);
+        sauvegarderDB();
+        return true;
+    } catch (err) {
+        console.error("Erreur SQL:", err);
+        return false;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DÉMARRER LE SERVEUR AVEC TOUTES LES ROUTES
+=================================================================== */
+
+function demarrerServeur() {
+
+    /* ═══ API : TOUTES LES JOURNÉES ═══ */
+
+    app.get("/api/journees", (req, res) => {
+        const rows = queryAll(`
             SELECT 
                 j.id,
                 j.numero_jour,
@@ -144,7 +223,7 @@ app.get("/api/journees", (req, res) => {
             LEFT JOIN tickets t ON j.id = t.journee_id
             GROUP BY j.id
             ORDER BY j.numero_jour
-        `).all();
+        `);
 
         const journees = rows.map(row => ({
             ...row,
@@ -154,18 +233,12 @@ app.get("/api/journees", (req, res) => {
         }));
 
         res.json({ success: true, journees });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-/* ═══════════════════════════════════════════════════════════════
-   API : UNE JOURNÉE
-=================================================================== */
+    /* ═══ API : UNE JOURNÉE ═══ */
 
-app.get("/api/journees/:jour", (req, res) => {
-    try {
-        const row = db.prepare(`
+    app.get("/api/journees/:jour", (req, res) => {
+        const row = queryOne(`
             SELECT 
                 j.*,
                 a.nom as artiste_nom,
@@ -178,7 +251,7 @@ app.get("/api/journees/:jour", (req, res) => {
             LEFT JOIN tickets t ON j.id = t.journee_id
             WHERE j.numero_jour = ?
             GROUP BY j.id
-        `).get(req.params.jour);
+        `, [parseInt(req.params.jour)]);
 
         if (!row) return res.status(404).json({ error: "Journée non trouvée" });
 
@@ -190,24 +263,18 @@ app.get("/api/journees/:jour", (req, res) => {
                 taux_remplissage: ((row.tickets_presentiel + row.tickets_en_ligne) / row.capacite_max * 100).toFixed(1)
             }
         });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-/* ═══════════════════════════════════════════════════════════════
-   API : VENDRE DES TICKETS
-=================================================================== */
+    /* ═══ API : VENDRE DES TICKETS ═══ */
 
-app.post("/api/tickets", (req, res) => {
-    const { journee_id, type_vente, tickets_vendus, prix_ticket } = req.body;
+    app.post("/api/tickets", (req, res) => {
+        const { journee_id, type_vente, tickets_vendus, prix_ticket } = req.body;
 
-    if (!journee_id || !type_vente || !tickets_vendus || !prix_ticket) {
-        return res.status(400).json({ error: "Données manquantes" });
-    }
+        if (!journee_id || !type_vente || !tickets_vendus || !prix_ticket) {
+            return res.status(400).json({ error: "Données manquantes" });
+        }
 
-    try {
-        const row = db.prepare(`
+        const row = queryOne(`
             SELECT 
                 j.capacite_max,
                 a.nom as artiste_nom,
@@ -217,7 +284,7 @@ app.post("/api/tickets", (req, res) => {
             LEFT JOIN tickets t ON j.id = t.journee_id
             WHERE j.id = ?
             GROUP BY j.id
-        `).get(journee_id);
+        `, [parseInt(journee_id)]);
 
         if (!row) return res.status(404).json({ error: "Journée non trouvée" });
 
@@ -233,15 +300,15 @@ app.post("/api/tickets", (req, res) => {
             });
         }
 
-        db.prepare(`
-            INSERT INTO tickets (journee_id, type_vente, tickets_vendus, prix_ticket)
-            VALUES (?, ?, ?, ?)
-        `).run(journee_id, type_vente, parseInt(tickets_vendus), parseFloat(prix_ticket));
+        runSQL(
+            "INSERT INTO tickets (journee_id, type_vente, tickets_vendus, prix_ticket) VALUES (?, ?, ?, ?)",
+            [parseInt(journee_id), type_vente, parseInt(tickets_vendus), parseFloat(prix_ticket)]
+        );
 
-        db.prepare(`
-            INSERT INTO historique (action, journee_id, artiste_nom, type_vente, tickets, ancien_total, nouveau_total)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `).run("VENTE", journee_id, row.artiste_nom, type_vente, parseInt(tickets_vendus), ancien_total, nouveau_total);
+        runSQL(
+            "INSERT INTO historique (action, journee_id, artiste_nom, type_vente, tickets, ancien_total, nouveau_total) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ["VENTE", parseInt(journee_id), row.artiste_nom, type_vente, parseInt(tickets_vendus), ancien_total, nouveau_total]
+        );
 
         res.json({
             success: true,
@@ -250,19 +317,12 @@ app.post("/api/tickets", (req, res) => {
             nouveau_total,
             places_restantes: row.capacite_max - nouveau_total
         });
+    });
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    /* ═══ API : STATS GLOBALES ═══ */
 
-/* ═══════════════════════════════════════════════════════════════
-   API : STATS GLOBALES
-=================================================================== */
-
-app.get("/api/stats/global", (req, res) => {
-    try {
-        const row = db.prepare(`
+    app.get("/api/stats/global", (req, res) => {
+        const row = queryOne(`
             SELECT 
                 COUNT(DISTINCT j.id) as nb_journees,
                 SUM(j.capacite_max) as capacite_totale,
@@ -272,20 +332,20 @@ app.get("/api/stats/global", (req, res) => {
                 IFNULL(SUM(t.tickets_vendus * t.prix_ticket), 0) as recette_totale
             FROM journees j
             LEFT JOIN tickets t ON j.id = t.journee_id
-        `).get();
+        `);
 
-        const total = row.total_tickets || 0;
+        const total = row ? row.total_tickets || 0 : 0;
 
         res.json({
             success: true,
             stats: {
-                nb_journees: row.nb_journees,
-                capacite_totale: row.capacite_totale,
+                nb_journees: row ? row.nb_journees : 0,
+                capacite_totale: row ? row.capacite_totale : 0,
                 total_tickets: total,
-                total_presentiel: row.total_presentiel || 0,
-                total_en_ligne: row.total_en_ligne || 0,
-                recette_totale: row.recette_totale || 0,
-                taux_remplissage: row.capacite_totale > 0
+                total_presentiel: row ? row.total_presentiel || 0 : 0,
+                total_en_ligne: row ? row.total_en_ligne || 0 : 0,
+                recette_totale: row ? row.recette_totale || 0 : 0,
+                taux_remplissage: row && row.capacite_totale > 0
                     ? (total / row.capacite_totale * 100).toFixed(2)
                     : 0,
                 pourcentage_presentiel: total > 0
@@ -296,18 +356,12 @@ app.get("/api/stats/global", (req, res) => {
                     : "0"
             }
         });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-/* ═══════════════════════════════════════════════════════════════
-   API : CLASSEMENTS
-=================================================================== */
+    /* ═══ API : CLASSEMENT TOTAL ═══ */
 
-app.get("/api/stats/classement", (req, res) => {
-    try {
-        const rows = db.prepare(`
+    app.get("/api/stats/classement", (req, res) => {
+        const rows = queryAll(`
             SELECT 
                 a.nom as artiste_nom,
                 a.genre,
@@ -321,17 +375,15 @@ app.get("/api/stats/classement", (req, res) => {
             LEFT JOIN tickets t ON j.id = t.journee_id
             GROUP BY j.id
             ORDER BY total_tickets DESC
-        `).all();
+        `);
 
         res.json({ success: true, classement: rows });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-app.get("/api/stats/classement-presentiel", (req, res) => {
-    try {
-        const rows = db.prepare(`
+    /* ═══ API : CLASSEMENT PRÉSENTIEL ═══ */
+
+    app.get("/api/stats/classement-presentiel", (req, res) => {
+        const rows = queryAll(`
             SELECT 
                 a.nom as artiste_nom,
                 j.numero_jour,
@@ -342,17 +394,15 @@ app.get("/api/stats/classement-presentiel", (req, res) => {
             LEFT JOIN tickets t ON j.id = t.journee_id
             GROUP BY j.id
             ORDER BY presentiel DESC
-        `).all();
+        `);
 
         res.json({ success: true, classement: rows });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-app.get("/api/stats/classement-en-ligne", (req, res) => {
-    try {
-        const rows = db.prepare(`
+    /* ═══ API : CLASSEMENT EN LIGNE ═══ */
+
+    app.get("/api/stats/classement-en-ligne", (req, res) => {
+        const rows = queryAll(`
             SELECT 
                 a.nom as artiste_nom,
                 j.numero_jour,
@@ -363,66 +413,69 @@ app.get("/api/stats/classement-en-ligne", (req, res) => {
             LEFT JOIN tickets t ON j.id = t.journee_id
             GROUP BY j.id
             ORDER BY en_ligne DESC
-        `).all();
+        `);
 
         res.json({ success: true, classement: rows });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-/* ═══════════════════════════════════════════════════════════════
-   API : HISTORIQUE
-=================================================================== */
+    /* ═══ API : HISTORIQUE ═══ */
 
-app.get("/api/historique", (req, res) => {
-    try {
-        const rows = db.prepare(`
+    app.get("/api/historique", (req, res) => {
+        const rows = queryAll(`
             SELECT * FROM historique
             ORDER BY date_action DESC
             LIMIT 100
-        `).all();
+        `);
 
         res.json({ success: true, historique: rows });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-/* ═══════════════════════════════════════════════════════════════
-   API : ARTISTES
-=================================================================== */
+    /* ═══ API : ARTISTES ═══ */
 
-app.get("/api/artistes", (req, res) => {
-    try {
-        const rows = db.prepare("SELECT * FROM artistes ORDER BY id").all();
+    app.get("/api/artistes", (req, res) => {
+        const rows = queryAll("SELECT * FROM artistes ORDER BY id");
         res.json({ success: true, artistes: rows });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
-/* ═══════════════════════════════════════════════════════════════
-   PAGE HTML
-=================================================================== */
+    /* ═══ PAGE HTML ═══ */
 
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "views/index.html"));
-});
+    app.get("/", (req, res) => {
+        res.sendFile(path.join(__dirname, "views/index.html"));
+    });
 
-/* ═══════════════════════════════════════════════════════════════
-   DÉMARRAGE
-=================================================================== */
+    /* ═══ DÉMARRAGE ═══ */
 
-app.listen(PORT, () => {
-    console.log(`
+    app.listen(PORT, () => {
+        console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║        🌙 FESTIVAL RAMADAN 1447H - SERVEUR DÉMARRÉ 🌙     ║
 ╠════════════════════════════════════════════════════════════╣
 ║  URL       : http://localhost:${PORT}                        ║
-║  Database  : database.db                                   ║
+║  Database  : database.db (sql.js)                          ║
 ║  Journées  : 20 jours / 20 artistes                       ║
 ║  Mémoire   : ✅ Persistante                                ║
 ╚════════════════════════════════════════════════════════════╝
-    `);
+        `);
+    });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LANCER
+=================================================================== */
+
+initialiserDB().catch(err => {
+    console.error("❌ Erreur initialisation:", err);
+});
+
+// Sauvegarder avant fermeture
+process.on('SIGINT', () => {
+    console.log("\n💾 Sauvegarde finale...");
+    sauvegarderDB();
+    console.log("✅ Base sauvegardée. Au revoir !");
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    sauvegarderDB();
+    process.exit(0);
 });
