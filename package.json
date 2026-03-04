@@ -1,20 +1,15 @@
 {
   "name": "festival-ramadan",
-  "version": "2.0.0",
-  "description": "Gestionnaire de Festival Ramadan avec mémoire persistante",
+  "version": "1.0.0",
+  "description": "Festival Ramadan 1447H",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "sqlite3": "^5.1.6",
+    "better-sqlite3": "^11.0.0",
     "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "moment": "^2.29.4"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+    "cors": "^2.8.5"
   }
 }
